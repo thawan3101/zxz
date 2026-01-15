@@ -2,7 +2,6 @@ import streamlit as st
 import random
 from collections import Counter
 from PIL import Image
-from io import BytesIO
 
 # ---------------- CONFIG ----------------
 st.set_page_config(
@@ -17,102 +16,103 @@ st.caption("ใช้เพื่อประกอบการตัดสิ�
 if "history" not in st.session_state:
     st.session_state.history = []
 
+# ---------------- RECOMMENDED WEBS ----------------
+st.subheader("✅ เว็บที่เหมาะกับการใช้ระบบนี้")
+
+st.markdown("""
+### ✅ **LSM Play**
+เหมาะกับสายเล่นยาว เค้าเสถียร อ่านทางง่าย  
+👉 [กดสมัคร / เข้าเล่น](https://hitz.lsmplay.com/register?channel=1731951258444&affiliatecode=1503558)
+
+---
+
+### ✅ **X168 AI**
+เหมาะกับการใช้ AI วิเคราะห์โดยเฉพาะ  
+โต๊ะชัด Roadmap อ่านง่าย  
+👉 [กดสมัคร / เข้าเล่น](https://www.x168ai.xyz/register?member_ref=bca2101067)
+""")
+
+st.divider()
+
 # ---------------- GAME SELECT ----------------
 game = st.selectbox(
     "🎮 เลือกเกม",
     ["บาคาร่า", "เสือมังกร", "แดงดำ"]
 )
 
-# ---------------- AFFILIATE WEBS ----------------
-st.divider()
-st.subheader("🔥 เว็บแนะนำ (เหมาะกับการใช้ระบบนี้)")
-
+# ---------------- IMAGE UPLOAD INFO ----------------
 st.markdown("""
-### ✅ LSM Play  
-เหมาะกับสายเล่นยาว ระบบเสถียร เค้าไม่แกว่ง  
-👉 [กดสมัคร / เข้าเล่น](https://hitz.lsmplay.com/register?channel=1731951258444&affiliatecode=1503558)
+📸 **อัปโหลดรูปผลล่าสุด (แคปหน้าจอได้)**  
 
----
-
-### ✅ X168 AI  
-เหมาะกับการใช้ AI วิเคราะห์โดยเฉพาะ โต๊ะชัด อ่าน Roadmap ง่าย  
-👉 [กดสมัคร / เข้าเล่น](https://www.x168ai.xyz/register?member_ref=bca2101067)
+> ℹ️ **หากอัปโหลดรูปไม่ผ่าน / error**  
+> - ให้ตัดรูป **เหลือเฉพาะตารางเค้าไพ่ (Roadmap)**  
+> - ไม่จำเป็นต้องเอาทั้งหน้าจอเกม  
+> - รูปเล็กลง = วิเคราะห์ได้เร็วและเสถียรกว่า
 """)
 
-# ---------------- IMAGE UPLOAD ----------------
-st.divider()
-uploaded_file = st.file_uploader(
-    "📸 อัปโหลดรูปผลล่าสุด (แคปหน้าจอแนวตั้งได้ ระบบจะย่อให้อัตโนมัติ)",
+st.info(
+    "💡 หากใช้ VPN หรือเน็ตฟรี อาจทำให้อัปโหลดรูปไม่ได้\n"
+    "แนะนำปิด VPN ชั่วคราวตอนอัปโหลดรูป"
+)
+
+# ---------------- IMAGE UPLOADER ----------------
+img = st.file_uploader(
+    "",
     type=["png", "jpg", "jpeg"]
 )
 
-def show_full_image(uploaded_file):
-    img = Image.open(uploaded_file)
-    if img.mode != "RGB":
-        img = img.convert("RGB")
+if img:
+    image = Image.open(img)
+    st.image(image, use_container_width=True)
 
-    max_width = 1080
-    if img.width > max_width:
-        ratio = max_width / img.width
-        new_size = (max_width, int(img.height * ratio))
-        img = img.resize(new_size, Image.LANCZOS)
-
-    buffer = BytesIO()
-    img.save(buffer, format="JPEG", quality=80)
-    buffer.seek(0)
-
-    st.image(buffer, use_container_width=True)
-
-# ---------------- ANALYSIS ----------------
-if uploaded_file:
-    show_full_image(uploaded_file)
-
+    # ---------- Define choices ----------
     if game == "บาคาร่า":
-        choices = ["ผู้เล่น", "เจ้ามือ"]
+        choices = ["ผู้เล่น", "เจ้ามือ", "เสมอ"]
     elif game == "เสือมังกร":
         choices = ["เสือ", "มังกร"]
     else:
         choices = ["แดง", "ดำ"]
 
-    # จำลองการเพิ่มผลล่าสุด 1 ตา
-    last_round = random.choice(choices)
-    st.session_state.history.append(last_round)
+    # ---------- Simulate new round ----------
+    st.session_state.history.append(random.choice(choices))
 
-    history = st.session_state.history
-    total = len(history)
+    # ---------- Predict next 10 ----------
+    def predict_next(history, choices, n=10):
+        result = []
+        if history:
+            last = history[-1]
+            for _ in range(n):
+                if random.random() < 0.6:
+                    result.append(last)
+                else:
+                    result.append(random.choice(choices))
+        else:
+            result = random.choices(choices, k=n)
+        return result
 
-    # วิเคราะห์เค้า
+    preds = predict_next(st.session_state.history, choices)
+
+    # ---------- Analysis ----------
+    st.divider()
+    st.subheader("📊 วิเคราะห์สถิติที่ผ่านมา")
+
+    cnt = Counter(st.session_state.history)
+    total = len(st.session_state.history)
+
+    for k, v in cnt.items():
+        st.write(f"{k} = {v} ครั้ง ({v/total*100:.1f}%)")
+
+    # ---------- Run streak ----------
     run = 1
     for i in range(total - 1, 0, -1):
-        if history[i] == history[i - 1]:
+        if st.session_state.history[i] == st.session_state.history[i - 1]:
             run += 1
         else:
             break
 
-    cnt = Counter(history)
+    st.write(f"🔥 เค้าปัจจุบันติด: {run} ตา")
 
-    st.divider()
-    st.subheader("📊 วิเคราะห์เค้าปัจจุบัน")
-
-    st.write(f"▶ ตาล่าสุด: **{last_round}**")
-    st.write(f"🔥 เค้าติด: **{run} ตา**")
-
-    for k, v in cnt.items():
-        st.write(f"{k} = {v} ({v/total*100:.1f}%)")
-
-    # ---------------- PREDICT ----------------
-    def predict_next(history, choices, n=10):
-        result = []
-        last = history[-1]
-        for _ in range(n):
-            if random.random() < 0.65:
-                result.append(last)
-            else:
-                result.append(random.choice(choices))
-        return result
-
-    preds = predict_next(history, choices)
-
+    # ---------- Prediction ----------
     st.divider()
     st.subheader("🔮 คาดการณ์ล่วงหน้า 10 ตา")
 
@@ -120,7 +120,6 @@ if uploaded_file:
         st.write(f"ตาที่ {i} → {p}")
 
 # ---------------- RESET ----------------
-st.divider()
 if st.button("🔄 รีเซ็ตข้อมูลทั้งหมด"):
     st.session_state.history = []
     st.experimental_rerun()
